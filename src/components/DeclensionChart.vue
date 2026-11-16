@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import {
   ANSWERS,
   CASES,
+  CELL_ORDER,
   GENDERS,
   NONE_CELLS,
   TOTAL_CELLS,
@@ -31,11 +32,48 @@ function isCorrect(id: string): boolean | null {
   return inputs[id]?.toLowerCase() === ANSWERS[id]
 }
 
+// Both layouts render the same inputs, so keep a ref map per layout and
+// auto-tab within the visible one (table on desktop, cards on mobile).
+const tableInputEls = new Map<string, HTMLInputElement>()
+const cardInputEls = new Map<string, HTMLInputElement>()
+
+function setInputRef(map: Map<string, HTMLInputElement>, id: string, el: unknown) {
+  if (el instanceof HTMLInputElement) map.set(id, el)
+  else map.delete(id)
+}
+
+function activeInputEls(): Map<string, HTMLInputElement> {
+  return window.matchMedia('(max-width: 640px)').matches ? cardInputEls : tableInputEls
+}
+
+function focusNeighbour(id: string, step: 1 | -1) {
+  const next = CELL_ORDER[CELL_ORDER.indexOf(id) + step]
+  if (next) activeInputEls().get(next)?.focus()
+}
+
 function onInput(id: string, value: string) {
   // Keep one letter, lowercase. Editing after a check clears the result
   // so the score is only ever for the chart as it stands.
   inputs[id] = value.toLowerCase().replace(/[^a-z]/g, '').slice(0, 1)
   checked.value = false
+  // A filled cell tabs on to the next one.
+  if (inputs[id]) focusNeighbour(id, 1)
+}
+
+function onKeydown(id: string, event: KeyboardEvent) {
+  const target = event.target as HTMLInputElement
+  // Backspace on an empty cell goes back to the previous one.
+  if (event.key === 'Backspace' && target.value === '') {
+    event.preventDefault()
+    focusNeighbour(id, -1)
+    return
+  }
+  // Typing over a filled cell replaces it and moves on, instead of
+  // maxlength swallowing the keystroke.
+  if (/^[a-z]$/i.test(event.key) && target.value !== '') {
+    event.preventDefault()
+    onInput(id, event.key)
+  }
 }
 
 function check() {
@@ -102,6 +140,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
               :class="`gender-${gender.id}`"
             >
               <input
+                :ref="(el) => setInputRef(tableInputEls, cellId({ caseId: caseRow.id, genderId: gender.id, strength }), el)"
                 :value="inputs[cellId({ caseId: caseRow.id, genderId: gender.id, strength })]"
                 :aria-label="label(caseRow.id, gender.id, strength)"
                 :class="{
@@ -117,6 +156,9 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
                     cellId({ caseId: caseRow.id, genderId: gender.id, strength }),
                     ($event.target as HTMLInputElement).value,
                   )
+                "
+                @keydown="
+                  onKeydown(cellId({ caseId: caseRow.id, genderId: gender.id, strength }), $event)
                 "
               />
               <span
@@ -157,6 +199,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
             >
               <span class="cell-name">{{ strength === 'strong' ? 'Strong' : 'Weak' }}</span>
               <input
+                :ref="(el) => setInputRef(cardInputEls, cellId({ caseId: caseRow.id, genderId: gender.id, strength }), el)"
                 :value="inputs[cellId({ caseId: caseRow.id, genderId: gender.id, strength })]"
                 :aria-label="label(caseRow.id, gender.id, strength)"
                 :class="{
@@ -172,6 +215,9 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
                     cellId({ caseId: caseRow.id, genderId: gender.id, strength }),
                     ($event.target as HTMLInputElement).value,
                   )
+                "
+                @keydown="
+                  onKeydown(cellId({ caseId: caseRow.id, genderId: gender.id, strength }), $event)
                 "
               />
               <span
