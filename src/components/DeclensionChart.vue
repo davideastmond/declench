@@ -65,7 +65,8 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
 
 <template>
   <section class="chart-wrap">
-    <table class="chart">
+    <div class="table-scroll">
+      <table class="chart">
       <thead>
         <tr>
           <th scope="col" class="corner"></th>
@@ -130,8 +131,9 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
             </td>
           </template>
         </tr>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
 
     <div class="controls">
       <button type="button" class="primary" @click="check">Check</button>
@@ -158,11 +160,34 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
   text-align: center;
 }
 
+/* On narrow screens the table scrolls sideways instead of squashing,
+   so the inputs stay big enough to tap. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .chart {
   width: 100%;
+  min-width: 620px;
   border-collapse: collapse;
   margin: 0 auto;
   font-size: 18px;
+}
+
+/* Keep the case labels visible while scrolling sideways. */
+.chart thead .corner {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+.chart tbody th {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 1;
 }
 
 .chart th,
@@ -285,5 +310,36 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
   font-size: 14px;
   color: #555;
   margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .chart-wrap {
+    padding: 0 8px 24px;
+  }
+
+  .chart {
+    min-width: 560px;
+    font-size: 16px;
+  }
+
+  .chart th,
+  .chart td {
+    padding: 4px 2px;
+  }
+
+  .chart thead tr:nth-child(2) th {
+    font-size: 13px;
+  }
+
+  .chart input {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+
+  .controls button {
+    flex: 1 1 auto;
+    padding: 10px 12px;
+  }
 }
 </style>
