@@ -135,6 +135,60 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
       </table>
     </div>
 
+    <!-- Mobile layout: one card per case, same inputs and state as the
+         table above (both bind to the same answers, only one is shown). -->
+    <div class="cards">
+      <article v-for="caseRow in CASES" :key="caseRow.id" class="case-card">
+        <h3>{{ caseRow.full }}</h3>
+        <div
+          v-for="gender in GENDERS"
+          :key="gender.id"
+          :class="`gender-block gender-${gender.id}`"
+        >
+          <h4>{{ gender.label }}</h4>
+          <div class="cell-row">
+            <span v-if="gender.hasNoneColumn" class="none-slot">
+              <span v-if="noneCell(caseRow.id, gender.id)" title="No declension">Ø</span>
+            </span>
+            <label
+              v-for="strength in (['strong', 'weak'] as const)"
+              :key="strength"
+              class="cell-field"
+            >
+              <span class="cell-name">{{ strength === 'strong' ? 'Strong' : 'Weak' }}</span>
+              <input
+                :value="inputs[cellId({ caseId: caseRow.id, genderId: gender.id, strength })]"
+                :aria-label="label(caseRow.id, gender.id, strength)"
+                :class="{
+                  strong: strength === 'strong',
+                  correct: isCorrect(cellId({ caseId: caseRow.id, genderId: gender.id, strength })) === true,
+                  wrong: isCorrect(cellId({ caseId: caseRow.id, genderId: gender.id, strength })) === false,
+                }"
+                maxlength="1"
+                inputmode="text"
+                autocomplete="off"
+                @input="
+                  onInput(
+                    cellId({ caseId: caseRow.id, genderId: gender.id, strength }),
+                    ($event.target as HTMLInputElement).value,
+                  )
+                "
+              />
+              <span
+                v-if="
+                  checked &&
+                  isCorrect(cellId({ caseId: caseRow.id, genderId: gender.id, strength })) === false
+                "
+                class="correction"
+              >
+                {{ ANSWERS[cellId({ caseId: caseRow.id, genderId: gender.id, strength })] }}
+              </span>
+            </label>
+          </div>
+        </div>
+      </article>
+    </div>
+
     <div class="controls">
       <button type="button" class="primary" @click="check">Check</button>
       <button type="button" @click="reveal">Reveal</button>
@@ -222,7 +276,8 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
   font-size: 20px;
 }
 
-.chart input {
+.chart input,
+.cards input {
   width: 44px;
   height: 44px;
   font-size: 22px;
@@ -234,20 +289,28 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
   color: #111;
 }
 
-.chart input.strong {
+.chart input.strong,
+.cards input.strong {
   font-weight: 700;
 }
 
-.chart input.correct {
+.chart input.correct,
+.cards input.correct {
   border-color: #2e7d32;
   background: #e6f4ea;
   outline: 2px solid #2e7d32;
 }
 
-.chart input.wrong {
+.chart input.wrong,
+.cards input.wrong {
   border-color: #c62828;
   background: #fce8e6;
   outline: 2px solid #c62828;
+}
+
+/* Card layout is mobile-only; the table is the desktop layout. */
+.cards {
+  display: none;
 }
 
 .correction {
@@ -317,24 +380,73 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
     padding: 0 8px 24px;
   }
 
-  .chart {
-    min-width: 560px;
+  /* Swap the table for the stacked cards. */
+  .table-scroll {
+    display: none;
+  }
+
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .case-card {
+    border: 1px solid #9a9a9a;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: left;
+    background: #fff;
+  }
+
+  .case-card h3 {
+    margin: 0 0 12px;
+    font-size: 20px;
+  }
+
+  .gender-block {
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .gender-block:last-child {
+    margin-bottom: 0;
+  }
+
+  .gender-block h4 {
+    margin: 0 0 8px;
     font-size: 16px;
   }
 
-  .chart th,
-  .chart td {
-    padding: 4px 2px;
+  .cell-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
   }
 
-  .chart thead tr:nth-child(2) th {
-    font-size: 13px;
-  }
-
-  .chart input {
-    width: 38px;
-    height: 38px;
+  .none-slot {
+    width: 44px;
+    padding-top: 26px;
+    text-align: center;
     font-size: 20px;
+    color: #555;
+  }
+
+  .cell-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cell-name {
+    font-size: 14px;
+    color: #111;
+  }
+
+  .cards input {
+    width: 48px;
+    height: 48px;
   }
 
   .controls button {
