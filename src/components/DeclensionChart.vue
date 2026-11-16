@@ -243,17 +243,36 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
 
 .controls button {
   font-size: 16px;
+  font-weight: 600;
   padding: 8px 20px;
   border-radius: 6px;
-  border: 1px solid #888;
+  border: 1px solid #555;
   background: #fff;
+  color: #111;
   cursor: pointer;
 }
 
+.controls button:hover {
+  background: #e8e8e8;
+}
+
+.controls button:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
 .controls button.primary {
-  background: #1a73e8;
-  border-color: #1a73e8;
+  background: #1557b0;
+  border-color: #1557b0;
   color: #fff;
+}
+
+.controls button.primary:hover {
+  background: #0f4a94;
+}
+
+.controls button.primary:focus-visible {
+  outline-color: #1557b0;
 }
 
 .score {
