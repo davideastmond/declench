@@ -14,11 +14,11 @@ export interface CellKey {
   strength: Strength
 }
 
-export const CASES: { id: CaseId; label: string }[] = [
-  { id: 'nom', label: 'Nom.' },
-  { id: 'acc', label: 'Acc.' },
-  { id: 'dat', label: 'Dat.' },
-  { id: 'gen', label: 'Gen.' },
+export const CASES: { id: CaseId; label: string; full: string }[] = [
+  { id: 'nom', label: 'Nom.', full: 'Nominative' },
+  { id: 'acc', label: 'Acc.', full: 'Accusative' },
+  { id: 'dat', label: 'Dat.', full: 'Dative' },
+  { id: 'gen', label: 'Gen.', full: 'Genitive' },
 ]
 
 export const GENDERS: { id: GenderId; label: string; hasNoneColumn: boolean }[] = [
