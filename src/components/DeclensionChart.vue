@@ -76,6 +76,7 @@ function shuffleGenders() {
     next = shuffled(genderOrder.value)
   }
   genderOrder.value = next
+  pulseColumns()
 }
 
 function shuffleCases() {
@@ -86,9 +87,24 @@ function shuffleCases() {
   caseOrder.value = next
 }
 
+// A short fade-slide pulse for column changes: table cells can't glide
+// sideways the way rows can, so they fade in place instead.
+let columnAnimTimeout: ReturnType<typeof setTimeout> | undefined
+const columnAnimating = ref(false)
+
+function pulseColumns() {
+  columnAnimating.value = true
+  window.clearTimeout(columnAnimTimeout)
+  columnAnimTimeout = window.setTimeout(() => {
+    columnAnimating.value = false
+  }, 400)
+}
+
 function resetOrder() {
+  const columnsChanged = genderOrder.value.some((gender, i) => gender.id !== GENDERS[i].id)
   genderOrder.value = [...GENDERS]
   caseOrder.value = [...CASES]
+  if (columnsChanged) pulseColumns()
 }
 
 function focusNeighbour(id: string, step: 1 | -1) {
@@ -148,7 +164,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
 </script>
 
 <template>
-  <section class="chart-wrap">
+  <section class="chart-wrap" :class="{ 'column-anim': columnAnimating }">
     <div class="table-scroll">
       <table class="chart">
       <thead>
@@ -173,7 +189,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
           </template>
         </tr>
       </thead>
-      <tbody>
+      <TransitionGroup name="shuffle" tag="tbody">
         <tr v-for="caseRow in caseOrder" :key="caseRow.id">
           <th scope="row">{{ caseRow.label }}</th>
           <template v-for="gender in genderOrder" :key="gender.id">
@@ -219,13 +235,13 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
             </td>
           </template>
         </tr>
-        </tbody>
+      </TransitionGroup>
       </table>
     </div>
 
     <!-- Mobile layout: one card per case, same inputs and state as the
          table above (both bind to the same answers, only one is shown). -->
-    <div class="cards">
+    <TransitionGroup name="shuffle" tag="div" class="cards">
       <article v-for="caseRow in caseOrder" :key="caseRow.id" class="case-card">
         <h3>{{ caseRow.full }}</h3>
         <div
@@ -279,7 +295,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
           </div>
         </div>
       </article>
-    </div>
+    </TransitionGroup>
 
     <div class="controls">
       <button type="button" class="primary" @click="check">Check</button>
@@ -406,6 +422,42 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
 /* Card layout is mobile-only; the table is the desktop layout. */
 .cards {
   display: none;
+}
+
+/* Reordering animation. Rows (and mobile cards) glide to their new spots
+   via the TransitionGroup FLIP move; columns fade-slide in place, since
+   table cells can't glide sideways. */
+.shuffle-move {
+  transition: transform 0.45s ease;
+}
+
+@keyframes column-fade {
+  from {
+    opacity: 0.35;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.column-anim .chart th,
+.column-anim .chart td,
+.column-anim .gender-block {
+  animation: column-fade 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shuffle-move {
+    transition: none;
+  }
+
+  .column-anim .chart th,
+  .column-anim .chart td,
+  .column-anim .gender-block {
+    animation: none;
+  }
 }
 
 .correction {
