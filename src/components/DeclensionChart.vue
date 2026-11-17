@@ -425,20 +425,22 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
 }
 
 /* Reordering animation. Rows (and mobile cards) glide to their new spots
-   via the TransitionGroup FLIP move; columns fade-slide in place, since
-   table cells can't glide sideways. */
+   via the TransitionGroup FLIP move; columns fade in place, since table
+   cells can't glide sideways. */
 .shuffle-move {
   transition: transform 0.45s ease;
 }
 
+/* Opacity only — no translate: the table sits in a horizontal-scroll
+   container, and overflow-x: auto forces overflow-y to auto too, so even
+   a 4px slide pushed the bottom row past the container and flashed a
+   vertical scrollbar for the length of the animation. */
 @keyframes column-fade {
   from {
     opacity: 0.35;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
