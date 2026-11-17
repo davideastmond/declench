@@ -1,4 +1,4 @@
-# Declench
+# German Declensions Practice Chart
 
 A personal Vue 3 + TypeScript + Vite app for practising German declension
 endings by filling in a chart.
