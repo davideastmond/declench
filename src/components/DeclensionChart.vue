@@ -3,7 +3,6 @@ import { computed, reactive, ref } from 'vue'
 import {
   ANSWERS,
   CASES,
-  CELL_ORDER,
   GENDERS,
   NONE_CELLS,
   TOTAL_CELLS,
@@ -46,8 +45,55 @@ function activeInputEls(): Map<string, HTMLInputElement> {
   return window.matchMedia('(max-width: 640px)').matches ? cardInputEls : tableInputEls
 }
 
+// Display order, shuffled on demand. Each gender moves as one block
+// (Strong + Weak, plus its Ø slot), and each case row moves as one block.
+const genderOrder = ref([...GENDERS])
+const caseOrder = ref([...CASES])
+
+// Auto-tab follows the order on screen, not the canonical chart order.
+const visibleCellOrder = computed(() =>
+  caseOrder.value.flatMap((caseRow) =>
+    genderOrder.value.flatMap((gender) =>
+      (['strong', 'weak'] as const).map((strength) =>
+        cellId({ caseId: caseRow.id, genderId: gender.id, strength }),
+      ),
+    ),
+  ),
+)
+
+function shuffled<T>(items: T[]): T[] {
+  const copy = [...items]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+function shuffleGenders() {
+  let next = shuffled(genderOrder.value)
+  while (next.every((gender, i) => gender.id === genderOrder.value[i].id)) {
+    next = shuffled(genderOrder.value)
+  }
+  genderOrder.value = next
+}
+
+function shuffleCases() {
+  let next = shuffled(caseOrder.value)
+  while (next.every((caseRow, i) => caseRow.id === caseOrder.value[i].id)) {
+    next = shuffled(caseOrder.value)
+  }
+  caseOrder.value = next
+}
+
+function resetOrder() {
+  genderOrder.value = [...GENDERS]
+  caseOrder.value = [...CASES]
+}
+
 function focusNeighbour(id: string, step: 1 | -1) {
-  const next = CELL_ORDER[CELL_ORDER.indexOf(id) + step]
+  const order = visibleCellOrder.value
+  const next = order[order.indexOf(id) + step]
   if (next) activeInputEls().get(next)?.focus()
 }
 
@@ -109,7 +155,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
         <tr>
           <th scope="col" class="corner"></th>
           <th
-            v-for="gender in GENDERS"
+            v-for="gender in genderOrder"
             :key="gender.id"
             scope="col"
             :colspan="gender.hasNoneColumn ? 3 : 2"
@@ -120,7 +166,7 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
         </tr>
         <tr>
           <th scope="col" class="corner"></th>
-          <template v-for="gender in GENDERS" :key="gender.id">
+          <template v-for="gender in genderOrder" :key="gender.id">
             <th v-if="gender.hasNoneColumn" scope="col" :class="`gender-${gender.id}`">Ø</th>
             <th scope="col" :class="`gender-${gender.id}`">Strong</th>
             <th scope="col" :class="`gender-${gender.id}`">Weak</th>
@@ -128,9 +174,9 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="caseRow in CASES" :key="caseRow.id">
+        <tr v-for="caseRow in caseOrder" :key="caseRow.id">
           <th scope="row">{{ caseRow.label }}</th>
-          <template v-for="gender in GENDERS" :key="gender.id">
+          <template v-for="gender in genderOrder" :key="gender.id">
             <td v-if="gender.hasNoneColumn" :class="`gender-${gender.id} none-cell`">
               <span v-if="noneCell(caseRow.id, gender.id)" title="No declension">Ø</span>
             </td>
@@ -180,10 +226,10 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
     <!-- Mobile layout: one card per case, same inputs and state as the
          table above (both bind to the same answers, only one is shown). -->
     <div class="cards">
-      <article v-for="caseRow in CASES" :key="caseRow.id" class="case-card">
+      <article v-for="caseRow in caseOrder" :key="caseRow.id" class="case-card">
         <h3>{{ caseRow.full }}</h3>
         <div
-          v-for="gender in GENDERS"
+          v-for="gender in genderOrder"
           :key="gender.id"
           :class="`gender-block gender-${gender.id}`"
         >
@@ -239,6 +285,9 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
       <button type="button" class="primary" @click="check">Check</button>
       <button type="button" @click="reveal">Reveal</button>
       <button type="button" @click="reset">Reset</button>
+      <button type="button" @click="shuffleGenders">Shuffle columns</button>
+      <button type="button" @click="shuffleCases">Shuffle rows</button>
+      <button type="button" @click="resetOrder">Original order</button>
       <p v-if="checked" class="score" role="status">
         {{ score }} / {{ TOTAL_CELLS }} correct
       </p>

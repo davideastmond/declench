@@ -80,7 +80,3 @@ export const ANSWERS: Record<string, string> = {
 }
 
 export const TOTAL_CELLS = Object.keys(ANSWERS).length // 32
-
-// Fill-in order: row by row through the chart (Nom. Masc. Strong first,
-// Gen. Plural Weak last), skipping the Ø cells, which are not inputs.
-export const CELL_ORDER: string[] = Object.keys(ANSWERS)
