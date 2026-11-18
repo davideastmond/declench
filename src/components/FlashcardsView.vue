@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue';
 import {
   ANSWERS,
   CASES,
@@ -9,7 +9,7 @@ import {
   type CaseId,
   type GenderId,
   type Strength,
-} from '../data/declensions'
+} from '../data/declensions';
 
 const emit = defineEmits<{
   back: []
@@ -24,7 +24,7 @@ function shuffled<T>(items: T[]): T[] {
   const copy = [...items]
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
 }
@@ -160,40 +160,23 @@ onMounted(() => {
         <div class="fields">
           <label class="cell-field">
             <span class="cell-name">Strong</span>
-            <input
-              ref="strongInput"
-              :value="strong"
-              aria-label="Strong ending"
-              :class="{
-                correct: isCorrect('strong') === true,
-                wrong: isCorrect('strong') === false,
-              }"
-              maxlength="1"
-              inputmode="text"
-              autocomplete="off"
+            <input ref="strongInput" :value="strong" aria-label="Strong ending" :class="{
+              correct: isCorrect('strong') === true,
+              wrong: isCorrect('strong') === false,
+            }" maxlength="1" inputmode="text" autocomplete="off"
               @input="onStrongInput(($event.target as HTMLInputElement).value)"
-              @keydown="onKeydown('strong', $event)"
-            />
+              @keydown="onKeydown('strong', $event)" />
             <span v-if="checked && isCorrect('strong') === false" class="correction">
               {{ answer(card, 'strong') }}
             </span>
           </label>
           <label class="cell-field">
             <span class="cell-name">Weak</span>
-            <input
-              ref="weakInput"
-              :value="weak"
-              aria-label="Weak ending"
-              :class="{
-                correct: isCorrect('weak') === true,
-                wrong: isCorrect('weak') === false,
-              }"
-              maxlength="1"
-              inputmode="text"
-              autocomplete="off"
-              @input="onWeakInput(($event.target as HTMLInputElement).value)"
-              @keydown="onKeydown('weak', $event)"
-            />
+            <input ref="weakInput" :value="weak" aria-label="Weak ending" :class="{
+              correct: isCorrect('weak') === true,
+              wrong: isCorrect('weak') === false,
+            }" maxlength="1" inputmode="text" autocomplete="off"
+              @input="onWeakInput(($event.target as HTMLInputElement).value)" @keydown="onKeydown('weak', $event)" />
             <span v-if="checked && isCorrect('weak') === false" class="correction">
               {{ answer(card, 'weak') }}
             </span>
@@ -235,6 +218,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+h2 {
+  color: black;
+}
+
 .flashcards {
   max-width: 640px;
   margin: 0 auto;
@@ -269,12 +256,15 @@ onMounted(() => {
 .gender-masc {
   background: #eec3cf;
 }
+
 .gender-fem {
   background: #b7d3e6;
 }
+
 .gender-neut {
   background: #c2dcc9;
 }
+
 .gender-plural {
   background: #d3d6d3;
 }
