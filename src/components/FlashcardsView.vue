@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import {
   ANSWERS,
   CASES,
@@ -57,6 +57,7 @@ const isLastCard = computed(() => index.value === deck.value.length - 1)
 
 const strongInput = ref<HTMLInputElement | null>(null)
 const weakInput = ref<HTMLInputElement | null>(null)
+const nextButton = ref<HTMLButtonElement | null>(null)
 
 function answer(card: Card, strength: Strength): string {
   return ANSWERS[cellId({ caseId: card.caseId, genderId: card.genderId, strength })]
@@ -117,6 +118,13 @@ function check() {
   if (!bothFilled.value) return
   checked.value = true
   results.value[index.value] = isCorrect('strong') === true && isCorrect('weak') === true
+  // A correct card moves the focus to Next, so one Enter press advances.
+  // A wrong card leaves the focus where it is, so the correction can be
+  // read before moving on. The Next button only renders once checked, so
+  // wait a tick for it to exist.
+  if (results.value[index.value]) {
+    nextTick(() => nextButton.value?.focus())
+  }
 }
 
 function next() {
@@ -189,7 +197,7 @@ onMounted(() => {
           <button v-if="!checked" type="button" class="primary" :disabled="!bothFilled" @click="check">
             Check
           </button>
-          <button v-else type="button" class="primary" @click="next">
+          <button v-else ref="nextButton" type="button" class="primary" @click="next">
             {{ isLastCard ? 'See score' : 'Next card' }}
           </button>
           <button type="button" @click="emit('back')">Back to chart</button>
