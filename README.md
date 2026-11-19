@@ -8,16 +8,17 @@ The chart follows German With Laura's
 [All-In-One Declensions Chart](https://germanwithlaura.com/declension/):
 rows are Nominative / Accusative / Dative / Genitive, columns are Masculine /
 Feminine / Neuter / Plural, each split into Strong and Weak. The three
-no-declension (Ø) cells — Masc. Nom., Neut. Nom., Neut. Acc. — are shown, not
-scored, for now.
+no-declension (Ø) cells — Masc. Nom., Neut. Nom., Neut. Acc. — are fillable
+too: type Ø or 0, scored separately (3 points on top of the 32).
 
 ## Chart mode
 
 ![The declension chart](docs/screenshots/chart.png)
 
 Fill in all 32 Strong and Weak endings, then hit **Check** to see your score
-and the correct ending for any wrong cell. **Reveal** fills in the whole
-chart; **Reset** clears it.
+and the correct ending for any wrong cell. The three Ø cells take Ø or 0 and
+are scored separately, 3 points on top of the 32. **Reveal** fills in the
+whole chart; **Reset** clears it.
 
 - **Auto-tab:** typing a letter moves to the next input (Backspace on an
   empty cell goes back).

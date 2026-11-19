@@ -2,7 +2,6 @@
 // (https://germanwithlaura.com/declension/).
 // Rows are cases, columns are genders, each split into Strong and Weak.
 // The "no declension" (Ø) cells are Masc. Nom., Neut. Nom. and Neut. Acc.
-// They are shown in the chart, not scored — how to practise them is still open.
 
 export type CaseId = 'nom' | 'acc' | 'dat' | 'gen'
 export type GenderId = 'masc' | 'fem' | 'neut' | 'plural'
@@ -28,12 +27,26 @@ export const GENDERS: { id: GenderId; label: string; hasNoneColumn: boolean }[] 
   { id: 'plural', label: 'Plural', hasNoneColumn: false },
 ]
 
-// The Ø column: only these three cells take no declension.
+// The Ø column: only these three cells take no declension. They are
+// fillable in the chart (type Ø or 0) and scored separately from the 32
+// endings.
 export const NONE_CELLS: Record<string, boolean> = {
   'nom-masc': true,
   'nom-neut': true,
   'acc-neut': true,
 }
+
+export function noneCellId(caseId: CaseId, genderId: GenderId): string {
+  return `${caseId}-${genderId}`
+}
+
+// A Ø cell accepts Ø or 0 as the answer.
+export function isNoneAnswer(value: string): boolean {
+  const v = value.toLowerCase()
+  return v === 'ø' || v === '0'
+}
+
+export const TOTAL_NONE_CELLS = Object.keys(NONE_CELLS).length // 3
 
 export function cellId(cell: CellKey): string {
   return `${cell.caseId}-${cell.genderId}-${cell.strength}`

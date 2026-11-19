@@ -6,7 +6,10 @@ import {
   GENDERS,
   NONE_CELLS,
   TOTAL_CELLS,
+  TOTAL_NONE_CELLS,
   cellId,
+  isNoneAnswer,
+  noneCellId,
   type CaseId,
   type GenderId,
   type Strength,
@@ -18,6 +21,11 @@ for (const id of Object.keys(ANSWERS)) inputs[id] = ''
 
 const checked = ref(false)
 
+// The three Ø cells have their own inputs, keyed by `${case}-${gender}`.
+// They accept Ø or 0, and are scored separately from the 32 endings.
+const noneInputs = reactive<Record<string, string>>({})
+for (const key of Object.keys(NONE_CELLS)) noneInputs[key] = ''
+
 const score = computed(() => {
   let correct = 0
   for (const [id, answer] of Object.entries(ANSWERS)) {
@@ -26,9 +34,22 @@ const score = computed(() => {
   return correct
 })
 
+const noneScore = computed(() => {
+  let correct = 0
+  for (const value of Object.values(noneInputs)) {
+    if (isNoneAnswer(value)) correct++
+  }
+  return correct
+})
+
 function isCorrect(id: string): boolean | null {
   if (!checked.value) return null
   return inputs[id]?.toLowerCase() === ANSWERS[id]
+}
+
+function isNoneCorrect(key: string): boolean | null {
+  if (!checked.value) return null
+  return isNoneAnswer(noneInputs[key] ?? '')
 }
 
 // Both layouts render the same inputs, so keep a ref map per layout and
@@ -51,13 +72,15 @@ const genderOrder = ref([...GENDERS])
 const caseOrder = ref([...CASES])
 
 // Auto-tab follows the order on screen, not the canonical chart order.
+// A gender's Ø cell, where it has one, comes first in its block.
 const visibleCellOrder = computed(() =>
   caseOrder.value.flatMap((caseRow) =>
-    genderOrder.value.flatMap((gender) =>
-      (['strong', 'weak'] as const).map((strength) =>
+    genderOrder.value.flatMap((gender) => [
+      ...(noneCell(caseRow.id, gender.id) ? [noneCellId(caseRow.id, gender.id)] : []),
+      ...(['strong', 'weak'] as const).map((strength) =>
         cellId({ caseId: caseRow.id, genderId: gender.id, strength }),
       ),
-    ),
+    ]),
   ),
 )
 
@@ -138,17 +161,44 @@ function onKeydown(id: string, event: KeyboardEvent) {
   }
 }
 
+function onNoneInput(key: string, value: string) {
+  // Keep one character, lowercase. Anything typed counts (a wrong letter
+  // is shown wrong on Check, like the other cells); only Ø or 0 is right.
+  noneInputs[key] = value.toLowerCase().replace(/[^a-z0-9ø]/g, '').slice(0, 1)
+  checked.value = false
+  // A filled cell tabs on to the next one.
+  if (noneInputs[key]) focusNeighbour(key, 1)
+}
+
+function onNoneKeydown(key: string, event: KeyboardEvent) {
+  const target = event.target as HTMLInputElement
+  // Backspace on an empty cell goes back to the previous one.
+  if (event.key === 'Backspace' && target.value === '') {
+    event.preventDefault()
+    focusNeighbour(key, -1)
+    return
+  }
+  // Typing over a filled cell replaces it and moves on, instead of
+  // maxlength swallowing the keystroke.
+  if (/^[a-z0-9ø]$/i.test(event.key) && target.value !== '') {
+    event.preventDefault()
+    onNoneInput(key, event.key)
+  }
+}
+
 function check() {
   checked.value = true
 }
 
 function reveal() {
   for (const [id, answer] of Object.entries(ANSWERS)) inputs[id] = answer
+  for (const key of Object.keys(noneInputs)) noneInputs[key] = 'ø'
   checked.value = false
 }
 
 function reset() {
   for (const id of Object.keys(inputs)) inputs[id] = ''
+  for (const key of Object.keys(noneInputs)) noneInputs[key] = ''
   checked.value = false
 }
 
@@ -160,6 +210,12 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
   const caseLabel = CASES.find((c) => c.id === caseId)?.label ?? caseId
   const genderLabel = GENDERS.find((g) => g.id === genderId)?.label ?? genderId
   return `${caseLabel} ${genderLabel} ${strength}`
+}
+
+function noneLabel(caseId: CaseId, genderId: GenderId): string {
+  const caseLabel = CASES.find((c) => c.id === caseId)?.label ?? caseId
+  const genderLabel = GENDERS.find((g) => g.id === genderId)?.label ?? genderId
+  return `${caseLabel} ${genderLabel} no declension — type Ø or 0`
 }
 </script>
 
@@ -194,7 +250,36 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
           <th scope="row">{{ caseRow.label }}</th>
           <template v-for="gender in genderOrder" :key="gender.id">
             <td v-if="gender.hasNoneColumn" :class="`gender-${gender.id} none-cell`">
-              <span v-if="noneCell(caseRow.id, gender.id)" title="No declension">Ø</span>
+              <input
+                v-if="noneCell(caseRow.id, gender.id)"
+                :ref="(el) => setInputRef(tableInputEls, noneCellId(caseRow.id, gender.id), el)"
+                :value="noneInputs[noneCellId(caseRow.id, gender.id)]"
+                :aria-label="noneLabel(caseRow.id, gender.id)"
+                :class="{
+                  correct: isNoneCorrect(noneCellId(caseRow.id, gender.id)) === true,
+                  wrong: isNoneCorrect(noneCellId(caseRow.id, gender.id)) === false,
+                }"
+                maxlength="1"
+                inputmode="text"
+                autocomplete="off"
+                @input="
+                  onNoneInput(
+                    noneCellId(caseRow.id, gender.id),
+                    ($event.target as HTMLInputElement).value,
+                  )
+                "
+                @keydown="onNoneKeydown(noneCellId(caseRow.id, gender.id), $event)"
+              />
+              <span
+                v-if="
+                  noneCell(caseRow.id, gender.id) &&
+                  checked &&
+                  isNoneCorrect(noneCellId(caseRow.id, gender.id)) === false
+                "
+                class="correction"
+              >
+                Ø
+              </span>
             </td>
             <td
               v-for="strength in (['strong', 'weak'] as const)"
@@ -252,7 +337,36 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
           <h4>{{ gender.label }}</h4>
           <div class="cell-row">
             <span v-if="gender.hasNoneColumn" class="none-slot">
-              <span v-if="noneCell(caseRow.id, gender.id)" title="No declension">Ø</span>
+              <input
+                v-if="noneCell(caseRow.id, gender.id)"
+                :ref="(el) => setInputRef(cardInputEls, noneCellId(caseRow.id, gender.id), el)"
+                :value="noneInputs[noneCellId(caseRow.id, gender.id)]"
+                :aria-label="noneLabel(caseRow.id, gender.id)"
+                :class="{
+                  correct: isNoneCorrect(noneCellId(caseRow.id, gender.id)) === true,
+                  wrong: isNoneCorrect(noneCellId(caseRow.id, gender.id)) === false,
+                }"
+                maxlength="1"
+                inputmode="text"
+                autocomplete="off"
+                @input="
+                  onNoneInput(
+                    noneCellId(caseRow.id, gender.id),
+                    ($event.target as HTMLInputElement).value,
+                  )
+                "
+                @keydown="onNoneKeydown(noneCellId(caseRow.id, gender.id), $event)"
+              />
+              <span
+                v-if="
+                  noneCell(caseRow.id, gender.id) &&
+                  checked &&
+                  isNoneCorrect(noneCellId(caseRow.id, gender.id)) === false
+                "
+                class="correction"
+              >
+                Ø
+              </span>
             </span>
             <label
               v-for="strength in (['strong', 'weak'] as const)"
@@ -307,11 +421,14 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
       <p v-if="checked" class="score" role="status">
         {{ score }} / {{ TOTAL_CELLS }} correct
       </p>
+      <p v-if="checked" class="score" role="status">
+        Ø {{ noneScore }} / {{ TOTAL_NONE_CELLS }} correct
+      </p>
     </div>
 
     <p class="note">
-      Ø cells are shown, not scored — how to practise them is still to be decided.
-      Chart: German With Laura's
+      Ø cells are fillable too — type Ø or 0. They're scored separately: 3
+      points on top of the 32. Chart: German With Laura's
       <a href="https://germanwithlaura.com/declension/">All-In-One Declensions Chart</a>.
     </p>
   </section>
@@ -574,12 +691,14 @@ function label(caseId: CaseId, genderId: GenderId, strength: Strength): string {
     align-items: flex-start;
   }
 
+  /* The Ø input is the same size as the other inputs, so it lines up
+     without the old text offset. */
   .none-slot {
-    width: 44px;
-    padding-top: 26px;
-    text-align: center;
-    font-size: 20px;
-    color: #555;
+    width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
   }
 
   .cell-field {
